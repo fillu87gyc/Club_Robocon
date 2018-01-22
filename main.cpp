@@ -22,19 +22,18 @@
  | bit5 | Rigth  |
  | bit6 | Down   |
  | bit7 | Left   |
- -+-----+-------+--
+ +------+--------+--
  | bit0 | L2     |
  | bit1 | R2     |
  | bit2 | L1     |
  | bit3 | R1     |
- | bit4 | △		|
+ | bit4 | △		 |
  | bit5 | Circle |
  | bit6 | Cross  |
  | bit7 | Square |
  -+------+-------+
 
  */
-
 #include "mbed/mbed.h"
 #include "myLIB/MySerial.h"
 #include "myLIB/button.h"
@@ -50,6 +49,7 @@ Serial slave(p13, p14);
 MySerial FEP01TJ(&slave);
 //debug
 DigitalOut led1(p6), led2(p7), led3(p8);
+DigitalOut shot(p12);
 //valve attach
 Motor motor;
 
@@ -57,7 +57,7 @@ Button dualshock;
 
 //global
 unchar re_data[8] = { 0 };
-double joystick[4] = { 0.0, 0.0, 0.0, 0.0 };
+double joystick[4] = { 0.0 };
 
 inline unchar CheckSum(unchar *data) {
 	return data[Lx] + data[Ly] + data[Rx] + data[Ry] + data[sw1] + data[sw2];
@@ -82,16 +82,7 @@ bool uartRead() {
 	re_data[sw2] = FEP01TJ.input();   //sw2
 	re_data[Sum] = FEP01TJ.input();   //CheckSum
 	re_data[end] = FEP01TJ.input();   //end
-#ifdef print_debugger
-#ifdef Serial_debugger
-	pc.printf("%d %d %d %d 0x%X 0x%X 0x%X 0x%X sum = 0x%x\n\r", re_data[Lx], re_data[Ly], re_data[Rx], re_data[Ry], re_data[sw1], re_data[sw2], re_data[Sum], re_data[end], CheckSum(re_data));
-#endif
-#endif
-	if ((re_data[Sum] == CheckSum(re_data)) && (re_data[end] == 0xAF))
-		return true;
-	else
-		return false;
-
+	return ((re_data[Sum] == CheckSum(re_data)) && (re_data[end] == 0xAF));
 }
 
 void input_val() {
@@ -103,36 +94,71 @@ void input_val() {
 }
 
 void arm_ctrl() {
-	double velocity = 0.4;
-	motor.dir3 = 0;
-	if (dualshock.push(R1))motor.dir3 = 1;
-	else if (dualshock.push(L1))motor.dir3 = 2;
-
-	if (dualshock.push(Square))velocity = 1.0;
-
-	motor.duty3 = (int)(999.9 * velocity);
-	motor.drive(3);
-}
-void machine_move()
-{
-//	motor.dir1 = (joystick[Ly] > 0.0) ? 1 : 2;
-//	motor.dir2 = (joystick[Ry] > 0.0) ? 1 : 2;
-	if(joystick[Ly]>0.0)motor.dir1 = 1;
-	else motor.dir1 = 2;
-	if(joystick[Ry]>0.0)motor.dir2 = 1;
-	else motor.dir2 = 2;
-
-	motor.duty1 = motor.abs( joystick[Ly] * 700);
-	motor.duty2 = motor.abs(joystick[Ry] * 700);
-	if (dualshock.push(Cross))
-	{
-		motor.duty1 *= 0.5;
-		motor.duty2 *= 0.5;
+	if (dualshock.rise(Start)) {
+		shot.write(1);
+		wait(1.0);
+		shot.write(0);
 	}
-	motor.drive_LP(1);
-	motor.drive_LP(2);
 }
+int machine_move() {
+	if (dualshock.push(L1) || dualshock.push(R1)) {
+		//信地旋回
+		if (dualshock.push(L1)) {
+			motor.dir[1] = motor.dir[3] = motor.FORWARD;
+			motor.dir[0] = motor.dir[2] = 0;
+		} else { //if (dualshock.push(R1)) {
+			motor.dir[1] = motor.dir[3] = 0;
+			motor.dir[0] = motor.dir[2] = motor.FORWARD;
+		}
+		for (int i = 0; i < 4; ++i) {
+			motor.duty[i] = 500;
+		}
+		if (dualshock.push(Cross)) {
+			for (int i = 0; i < 4; ++i) {
+				motor.duty[i] *= 0.5;
+			}
+		}
+		motor.allDrive_LP();
+		return 1;
+	}
+	if (joystick[Ly] != 0.0) {
+		//前進後退
+		if (joystick[Ly] > 0.0) {
+			for (int i = 0; i < 4; ++i) {
+				motor.dir[i] = motor.FORWARD;
+				motor.duty[i] = motor.abs(joystick[Ly] * 700);
+			}
+		} else if (joystick[Ly] < 0.0) {
+			for (int i = 0; i < 4; ++i) {
+				motor.dir[i] = motor.BACK;
+				motor.duty[i] = motor.abs(joystick[Ly] * 700);
+			}
+		}
+		if (dualshock.push(Cross)) {
+			for (int i = 0; i < 4; ++i) {
+				motor.duty[i] *= 0.5;
+			}
+		}
+		motor.allDrive_LP();
+		return 0;
+	}
+//超信地旋回
+	if (joystick[Rx] > 0.0) {
+		motor.dir[1] = motor.dir[3] = motor.BACK;
+		motor.dir[0] = motor.dir[2] = motor.FORWARD;
+	} else {
+		motor.dir[1] = motor.dir[3] = motor.FORWARD;
+		motor.dir[0] = motor.dir[2] = motor.BACK;
+	}
 
+	for (int i = 0; i < 4; ++i)
+		motor.duty[i] = motor.abs(joystick[Rx] * 400);
+	if (dualshock.push(Cross))
+		for (int i = 0; i < 4; ++i)
+			motor.duty[i] *= 0.5;
+	motor.allDrive_LP();
+	return 0;
+}
 void setup() {
 	slave.baud(38400);
 	motor.init();
@@ -143,11 +169,10 @@ void loop() {
 	if (uartRead()) {
 		led2.write(1);
 		input_val();
-		machine_move();
+		led3.write(machine_move());
 		arm_ctrl();
 		wait_ms(20);
-	}
-	else {
+	} else {
 		led2.write(0);
 		failed_counter++;
 		if (failed_counter > 2) {
@@ -158,5 +183,6 @@ void loop() {
 }
 int main() {
 	setup();
-	for (;;)loop();
+	for (;;)
+		loop();
 }

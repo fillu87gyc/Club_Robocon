@@ -40,25 +40,25 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: Club_robocon.axf
+all: Club_robocon_C.axf
 
 # Tool invocations
-Club_robocon.axf: $(OBJS) $(USER_OBJS)
+Club_robocon_C.axf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU C++ Linker'
-	arm-none-eabi-c++ -nostdlib -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\Motor" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768\TARGET_NXP" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768\TARGET_NXP\TARGET_LPC176X" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768\TARGET_NXP\TARGET_LPC176X\TARGET_MBED_LPC1768" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768\TOOLCHAIN_GCC_CR" -Xlinker -Map="Club_robocon.map" -Xlinker --gc-sections -mcpu=cortex-m3 -mthumb -T "C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon\mbed\TARGET_LPC1768\TOOLCHAIN_GCC_CR\LPC1768.ld" -o "Club_robocon.axf" $(OBJS) $(USER_OBJS) $(LIBS)
+	arm-none-eabi-c++ -nostdlib -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\Motor" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768\TARGET_NXP" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768\TARGET_NXP\TARGET_LPC176X" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768\TARGET_NXP\TARGET_LPC176X\TARGET_MBED_LPC1768" -L"C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768\TOOLCHAIN_GCC_CR" -Xlinker -Map="Club_robocon_C.map" -Xlinker --gc-sections -mcpu=cortex-m3 -mthumb -T "C:\Users\fill\Documents\LPCXpresso_6.0.4_159\workspace\Club_robocon_C\mbed\TARGET_LPC1768\TOOLCHAIN_GCC_CR\LPC1768.ld" -o "Club_robocon_C.axf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Club_robocon.axf
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Club_robocon_C.axf
 	-@echo ' '
 
 post-build:
 	-@echo 'Performing post-build steps'
-	-arm-none-eabi-size "Club_robocon.axf"; arm-none-eabi-objcopy -O binary "Club_robocon.axf" "Club_robocon.bin" ; # checksum -p LPC1768 -d "Club_robocon.bin";
+	-arm-none-eabi-size "Club_robocon_C.axf"; arm-none-eabi-objcopy -O binary "Club_robocon_C.axf" "Club_robocon_C.bin" ; # checksum -p LPC1768 -d "Club_robocon_C.bin";
 	-@echo ' '
 
 .PHONY: all clean dependents

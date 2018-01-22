@@ -3,6 +3,7 @@
 
 #include "mbed.h"
 
+#define NUMBER 4
 
 class Motor {
 public:
@@ -13,13 +14,10 @@ public:
 	void allDrive();
 	void drive_LP(int ch);
 	void allDrive_LP();
-	//int duty_old;
-	int duty1;
-	int duty2;
-	int duty3;
-	int dir1;
-	int dir2;
-	int dir3;
+	static const int FORWARD = 1;
+	static const int BACK = 2;
+	int duty[NUMBER];
+	int dir[NUMBER];
 	int abs(int a) {
 		if (a > 0)
 			return a;
@@ -27,20 +25,11 @@ public:
 			return -a;
 	}
 private:
-	int dir1_old;
-	int dir2_old;
-	int dir3_old;
-	int duty1_old;
-	int duty2_old;
-	int duty3_old;
-
-
-
+	int dir_old[NUMBER];
+	int duty_old[NUMBER];
 	static const int UP_MOTOR_SPEED = 50;	//50
 	static const int DOWN_MOTOR_SPEED = 20;	//20
 	static const int DIFF = 200;			//200
-	static const int FORWARD = 1;
-	static const int BACK = 2;
 	static const int MAGNIFICATION = 3;		//0への収束速度を決める(倍率)
 	static const int MOTOR_STOP_DUTY = 0;
 };

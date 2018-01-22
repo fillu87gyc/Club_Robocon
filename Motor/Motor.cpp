@@ -1,182 +1,119 @@
-#include  "Motor.h"
-#include "mbed.h"
+#include "Motor.h"
+PwmOut p[] = {  //  配列を用意します
+		PwmOut(p26),  //  配列の1番目の要素をLED4で初期化したDigitalOutに
+		PwmOut(p25),  //  ..
+		PwmOut(p24),  //  ..
+		PwmOut(p23)   //  ..
+		};
 
-PwmOut p1(p26);
-PwmOut p2(p25);
-PwmOut p3(p24);
-DigitalOut d1(P2_6);
-DigitalOut d2(P2_7);
-DigitalOut d3(P2_8);
-/*
- Serial pc(p28, p27);
- */
-Motor::Motor() {
-	duty1 = duty2 = duty3 = MOTOR_STOP_DUTY;
-	dir1 = dir2 = dir3 = FREAD;
-	dir1_old = dir2_old = dir3_old = FREAD;
-	duty1_old = duty2_old = duty3_old = MOTOR_STOP_DUTY;
+DigitalOut d[] = { //  配列の1番目の要素をLED4で初期化したDigitalOutに
+		DigitalOut(P2_6), // ..
+		DigitalOut(P2_7),  //  ..
+		DigitalOut(P2_8),  //  ..
+		DigitalOut(P2_10)   //  ..
+		};
+
+Motor::Motor()    //コンストラクタ
+{
+
 }
 
 void Motor::init() {
-	d1.write(0);
-	d2.write(0);
-	d3.write(0);
-	p1.period_ms(1);
-	p2.period_ms(1);
-	p3.period_ms(1);
+	for (int i = 0; i < 4; i++) {
+		p[i].write(0);
+		d[i].write(0);
+		p[i].period_us(83);
+		duty[i] = 0;
+		dir[i] = 0;
+		duty_old[i] = 0;
+		dir_old[i] = 0;
+	}
 }
-void Motor::drive(int ch) {
-	switch (ch) {
-	case 1:
-		if (duty1 < MOTOR_STOP_DUTY) {
-			duty1 = duty1_old = MOTOR_STOP_DUTY;
-		}
-		if (dir1 == 1)    //front
-		{
-			d1.write(0);
-			p1.write(duty1 / 1000.0);
-		}
-		else if (dir1 == 2)    //back
-		{
-			d1.write(1);
-			p1.write((1000 - duty1) / 1000.0);
-		} else  //break
-		{
-			d1.write(1);
-			p1.write(1.0f);
-		}
-		break;
-	case 2:
-		if (duty2 < MOTOR_STOP_DUTY) {
-			duty2 = duty2_old = MOTOR_STOP_DUTY;
-		}
-		if (dir2 == 2)  //front
-				{
-			d2.write(0);
-			p2.write(duty2 / 1000.0);
-		} else if (dir2 == 1)  //back
-				{
-			d2.write(1);
-			p2.write((1000 - duty2) / 1000.0);
-		} else  //brake
-		{
-			d2.write(1);
-			p2.write(1.0f);
-		}
-		break;
-	case 3:
 
-		if (dir3 == 2)  //front
-				{
-			d3.write(0);
-			p3.write(duty3 / 1000.0);
-		} else if (dir3 == 1)  //back
-				{
-			d3.write(1);
-			p3.write((1000 - duty3) / 1000.0);
-		} else  //brake
-		{
-			d3.write(1);
-			p3.write(1.0f);
+void Motor::drive(int ch) {
+	//0 1
+	//2 3
+	if (ch % 2 == 0) {
+		//右側車輪
+		if (dir[ch] == BACK) {
+			///Formt
+			d[ch] = 0;
+			p[ch].write(duty[ch] / 1000.0);
+		} else if (dir[ch] == FORWARD) {
+			//back
+			d[ch] = 1;
+			p[ch].write((1000 - duty[ch]) / 1000.0);
+		} else {
+			d[ch] = 1;
+			p[ch].write(1.0f);
 		}
-		break;
+	} else {
+		//左側車輪
+		if (dir[ch] == FORWARD) {
+			///Formt
+			d[ch] = 0;
+			p[ch].write(duty[ch] / 1000.0);
+		} else if (dir[ch] == BACK) {
+			//back
+			d[ch] = 1;
+			p[ch].write((1000 - duty[ch]) / 1000.0);
+		} else {
+			d[ch] = 1;
+			p[ch].write(1.0f);
+		}
+	}
+}
+void Motor::drive_LP(int ch) {
+	if (duty[ch] == MOTOR_STOP_DUTY) {
+		dir[ch] = dir_old[ch];
+		duty[ch] = duty_old[ch] = (duty_old[ch]	- DOWN_MOTOR_SPEED * MAGNIFICATION);
+		drive(ch);
+		return;
+	}
+	if (dir[ch] == dir_old[ch]) {
+		if (duty[ch] > duty_old[ch]) {
+			//加速したい
+			duty[ch] = duty_old[ch] = (duty_old[ch] + UP_MOTOR_SPEED);
+			drive(ch);
+			return;
+		} else {
+			//減速
+			duty[ch] = duty_old[ch] = (duty_old[ch] - DOWN_MOTOR_SPEED);
+			drive(ch);
+			return;
+		}
+	} else {
+		duty[ch] = duty_old[ch] = duty_old[ch] - DOWN_MOTOR_SPEED * MAGNIFICATION;
+		if (duty[ch] < DIFF) {
+			dir_old[ch] = dir[ch];
+			duty_old[ch] = duty[ch];
+			drive(ch);
+			return;
+		} else {
+			dir[ch] = dir_old[ch];
+			drive(ch);
+			return;
+		}
 	}
 }
 void Motor::off() {
-	//val init
-	dir1 = dir2 = dir3 = FORWARD;
-	duty1 = duty2 = duty3 = MOTOR_STOP_DUTY;
-	dir1_old = dir2_old = dir3_old = FORWARD;
-	duty1_old = duty2_old = duty3_old = MOTOR_STOP_DUTY;
-	drive(1);
-	drive(2);
+	for (int i = 0; i < 4; i++) {
+		dir[i] = 0;
+		duty[i] = 0;
+		duty_old[i] = 0;
+		dir_old[i] = 0;
+		drive(i);
+	}
 }
 
 void Motor::allDrive() {
-#ifdef motorLib_print_debugger
-	pc1.printf("%4d\t%4d\t%4d\t%4d\r%4d\n\r", duty1, duty2, duty3, duty4, duty_old);
-#endif
-	drive(1);
-	drive(2);
-}
-void Motor::allDrive_LP() {
-#ifdef motorLib_print_debugger
-	pc1.printf("%4d\t%4d\t%4d\t%4d\r%4d\n\r", duty1, duty2, duty3, duty4, duty_old);
-#endif
-	drive_LP(1);
-	drive_LP(2);
-}
-
-void Motor::drive_LP(int ch) {
-	if (ch == 1) {
-		if (duty1 == MOTOR_STOP_DUTY) {
-			dir1 = dir1_old;
-			duty1 = duty1_old = (duty1_old - DOWN_MOTOR_SPEED * MAGNIFICATION);
-			drive(1);
-			return;
-		}
-		if (dir1 == dir1_old) {
-			if (duty1 > duty1_old) {
-				//加速したい
-				duty1 = duty1_old = (duty1_old + UP_MOTOR_SPEED);
-				drive(1);
-				return;
-			} else {
-				//減速
-				duty1 = duty1_old = (duty1_old - DOWN_MOTOR_SPEED);
-				drive(1);
-				return;
-			}
-		} else {
-#ifdef print_debugger
-			pc.printf("dir no much \n\r");
-#endif
-			duty1 = duty1_old = duty1_old - DOWN_MOTOR_SPEED * MAGNIFICATION;
-			if (duty1 < DIFF) {
-				dir1_old = dir1;
-				duty1_old = duty1;
-				drive(1);
-				return;
-			} else {
-				dir1 = dir1_old;
-				drive(1);
-				return;
-			}
-		}
-	} else if (ch == 2) {
-		if (duty2 == MOTOR_STOP_DUTY) {
-			dir2 = dir2_old;
-			duty2 = duty2_old = (duty2_old - DOWN_MOTOR_SPEED * MAGNIFICATION);
-			drive(2);
-			return;
-		}
-		if (dir2 == dir2_old) {
-			if (duty2 > duty2_old) {
-				//加速したい
-				duty2 = duty2_old = (duty2_old + UP_MOTOR_SPEED);
-				drive(2);
-				return;
-			} else {
-				//減速
-				duty2 = duty2_old = (duty2_old - DOWN_MOTOR_SPEED);
-				drive(2);
-				return;
-			}
-		} else {
-#ifdef print_debugger
-			pc.printf("dir no much \n\r");
-#endif
-			duty2 = duty2_old = duty2_old - DOWN_MOTOR_SPEED * MAGNIFICATION;
-			if (duty2 < DIFF) {
-				dir2_old = dir2;
-				duty2_old = duty2;
-				drive(2);
-				return;
-			} else {
-				dir2 = dir2_old;
-				drive(2);
-				return;
-			}
-		}
+	for (int i = 0; i < 4; ++i) {
+		drive(i);
 	}
 }
+void Motor::allDrive_LP() {
+	for (int i = 0; i < 4; ++i) {
+		drive_LP(i);
+	}
+}
+
